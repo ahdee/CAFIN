@@ -1,2 +1,0 @@
-#tax_id	ncbi_release_number	ensembl_release_number	assembly_name	assembly_id	ccds_release_number	date_made_public
-10090	108	98	GRCm38.p6	GCF_000001635.26	23	20191024
