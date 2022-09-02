@@ -1,38 +1,59 @@
 library ( dplyr )
+bp= 20 # what length you want 
 
-hg19 = read.table("./CCDS/hg19/CCDS.GRCh37.p13.txt", header=TRUE,sep="\t",stringsAsFactors = FALSE,
+
+file =  "./CCDS/hg38/CCDS.GRCh38.p12.txt"
+
+hgi = read.table( file , header=TRUE,sep="\t",stringsAsFactors = FALSE,
                   na.strings=".", quote = "", fill = TRUE, comment.char = '!')
-hg19$X.chromosome = paste0("chr",hg19$X.chromosome)
 
-table ( hg19$ccds_status)
+hgi$X.chromosome = paste0("chr",hgi$X.chromosome)
 
-hg19 = hg19 [ !grepl ( "withdraw", hg19$ccds_status,  ignore.case = T), ]
+table ( hgi$ccds_status)
 
-hg19$cds_to = as.numeric ( hg19$cds_to  )
-hg19$cds_from = as.numeric (hg19$cds_from  ) 
+hgi = hgi [ !grepl ( "withdraw", hgi$ccds_status,  ignore.case = T), ]
+
+hgi$cds_to = as.numeric ( hgi$cds_to  )
+hgi$cds_from = as.numeric (hgi$cds_from  ) 
 
 
-hg19 = hg19 [!is.na ( hg19$cds_from) | !is.na ( hg19$cds_to) , ]
-unique ( hg19$ccds_status)
+hgi = hgi [!is.na ( hgi$cds_from) | !is.na ( hgi$cds_to) , ]
+unique ( hgi$ccds_status)
 
-hg19$length = hg19$cds_to - hg19$cds_from
+hgi$length = hgi$cds_to - hgi$cds_from
 
 # reorder by "Public", "Reviewed, update pending", "Under review, update" and decending length 
 # then remove duplicates 
 
-hg19 = hg19[ order ( hg19$ccds_status, hg19$gene, -hg19$length),]
-hg19 = hg19[!duplicated (hg19$gene), ]
+hgi = hgi[ order ( hgi$ccds_status, hgi$gene, -hgi$length),]
+hgi = hgi[!duplicated (hgi$gene), ]
 
 # cleanup ranges and split them into two columns
-hg19$cds_locations = gsub ( "\\[|\\]| ", "", hg19$cds_locations  )
+hgi$cds_locations = gsub ( "\\[|\\]| ", "", hgi$cds_locations  )
 
-hg19 = hg19 %>% 
+hgi = hgi %>% 
   mutate(exons = strsplit(as.character(cds_locations), ",")) %>% 
   unnest(exons)
 
-hg19$match_type = NULL 
-hg19$cds_locations = NULL 
+hgi$match_type = NULL 
+hgi$cds_locations = NULL 
 
 
 
-hg19[hg19$gene=="EWSR1", ] %>% tidyr::separate (exons, c("Left", "Right"), "-")
+
+# split into two columns 
+hgi <- hgi %>% tidyr::separate (exons, c("LeftBorder", "RightBorder"), "-")  %>%  data.frame ( stringsAsFactors = F)
+
+hgi$LeftBorder = as.numeric ( hgi$LeftBorder) + 1
+hgi$RightBorder = as.numeric ( hgi$RightBorder) + 1
+
+
+
+hgi$fusion_5_prime = ifelse ( hgi$cds_strand == "+", 
+                             paste0 (hgi$X.chromosome,":", hgi$RightBorder - bp , "-", hgi$RightBorder),
+                            paste0 (hgi$X.chromosome,":", hgi$LeftBorder  , "-",  hgi$LeftBorder + bp )
+                            
+                            )
+
+hgi[hgi$gene=="EWSR1", ] 
+hgi[hgi$gene=="PRIM1", ] 
